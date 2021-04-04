@@ -1,23 +1,30 @@
-import os
-import io
-import time
 import hashlib
+import io
+import os
+import time
+
 from PIL import Image
 from pip._vendor import requests
 from selenium import webdriver
 
+# search and download these things
+ITEM_LISTS = ["Morning Glory", "Calla Lily"]
+AMOUNT_PER_ITEM = 1000
 
-def fetch_image_urls(query: str, max_links_to_fetch: int, wd: webdriver, sleep_between_interactions: int = 1):
+# download the ChromeDriver for your Chrome version
+DRIVER_PATH = '/Users/aegerita/Downloads/chromedriver'
+
+# build the google query https://support.google.com/gsa/answer/6329265?hl=en
+SEARCH_URL = "https://www.google.com/search?safe=off&tbm=isch&tbs=isz:lt,islt:qsvga&q={q}"
+
+
+def fetch_image_urls(query: str, max_links_to_fetch: int, wd: webdriver, sleep_between_interactions: float = 0.5):
     def scroll_to_end(wd):
         wd.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(sleep_between_interactions)
 
-        # build the google query https://support.google.com/gsa/answer/6329265?hl=en
-
-    search_url = "https://www.google.com/search?safe=off&tbm=isch&tbs=isz:lt,islt:qsvga&q={q}"
-
     # load the page
-    wd.get(search_url.format(q=query))
+    wd.get(SEARCH_URL.format(q=query))
 
     image_urls = set()
     image_count = 0
@@ -60,8 +67,7 @@ def fetch_image_urls(query: str, max_links_to_fetch: int, wd: webdriver, sleep_b
             load_more_button = wd.find_element_by_css_selector(".mye4qd")
             if load_more_button:
                 wd.execute_script("document.querySelector('.mye4qd').click();")
-            time.sleep(5)
-            wd.execute_script("window.scrollBy(0, 64)")
+            time.sleep(3)
 
             # move the result startpoint further down
         results_start = len(thumbnail_results)
@@ -74,6 +80,7 @@ def persist_image(folder_path: str, url: str):
         image_content = requests.get(url).content
     except Exception as e:
         print(f"ERROR - Could not download {url} - {e}")
+        return
 
     try:
         image_file = io.BytesIO(image_content)
@@ -99,10 +106,5 @@ def search_and_download(search_term: str, driver_path: str, target_path='./image
         persist_image(target_folder, elem)
 
 
-# download these flowers
-FLOWER_NAMES = ["Morning Glory"]
-# download the ChromeDriver for your Chrome version
-DRIVER_PATH = '/Users/aegerita/Downloads/chromedriver'
-
-for flower in FLOWER_NAMES:
-    search_and_download(search_term=flower, driver_path=DRIVER_PATH, number_images=1000)
+for item in ITEM_LISTS:
+    search_and_download(search_term=item, driver_path=DRIVER_PATH, number_images=AMOUNT_PER_ITEM)
